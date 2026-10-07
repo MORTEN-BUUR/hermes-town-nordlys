@@ -13,15 +13,16 @@ This fork dresses the town as the Nordlys datacenter campus from Norway AI: mode
 | AI-paviljongen | Town hall | planning, delegation and model turns |
 | Arkivet | Library | reading files, search and memory |
 | Verkstedet | Workshop | editing, writing and patching |
-| Datasenteret | Forge | shell commands, tests and builds |
+| Datasenteret | Forge | shell commands, tests and builds (the quantum lab is in the glass bay) |
 | Portalen | Post office | git, GitHub and messages out |
 | Observatoriet | Observatory | web search and browsing |
 | Loungen | Tavern | finished sessions resting between turns |
 | Torget | Market | skills and unknown tools |
 
 - Buildings, workstations, lamps and banners are painted in code (`src/art/nordlys.ts`); the authored atlases are regraded to winter.
+- The square is a disc of light rings with a hologram of the mark, kiosks and info pillars; the old cemetery is a memorial grove of monoliths and runestones. Ella, the campus dog, sleeps by the Loungen door. All of it is presentation only.
 - Choosing a place opens a card with the Nordlys picture of it and how many residents are working there right now.
-- The inspector shows a Nordlys team portrait as the session's avatar. It is picked by a stable hash and never claims that a person did the work.
+- The inspector shows a Nordlys team member as the session's avatar (Sherlock Holmes, Odin, Lise, Morten Büür, Tord, Aleksander Olsen, Gary, Cody jr, and Claude as a pixel resident). The avatar is picked by a stable hash and never claims that a person did the work.
 - Aurora and snow (`src/hud/sky.ts`) are ambience only and never react to Hermes events.
 - `?theme=classic` (or `VITE_DEFAULT_THEME=classic` at build time) restores the original medieval town.
 

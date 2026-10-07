@@ -7,7 +7,7 @@ import { TownScene } from './scenes/TownScene';
 import { TownSim } from './sim/town';
 import { PLACE_LABEL, type Place } from './sim/toolMap';
 import { MAP_H, MAP_W, buildTownMap } from './world/map';
-import { CAMPUS_IMAGE, GUIDE_IMAGE, NORDLYS_PLACES, STAFF_PORTRAITS, resolveTheme } from './theme';
+import { CAMPUS_IMAGE, GUIDE_IMAGE, NORDLYS_PLACES, STAFF, resolveTheme } from './theme';
 import { startSky } from './hud/sky';
 import { hashString } from './art/painter';
 
@@ -101,7 +101,8 @@ function renderCard(): void {
     placeCard.innerHTML = `<button class="close" aria-label="Close">×</button><img src="${info.image}" alt="" />
       <div class="body"><h3>${escapeHtml(info.name)} <span>${escapeHtml(info.classic)}</span></h3>
       <div class="sub">${escapeHtml(info.work)}</div>
-      <div class="row"><span>here now</span><span>${here.length === 0 ? 'nobody' : `${here.length} working${runners ? ` · ${runners} tool ${runners === 1 ? 'call' : 'calls'}` : ''}`}</span></div></div>`;
+      <div class="row"><span>here now</span><span>${here.length === 0 ? 'nobody' : `${here.length} working${runners ? ` · ${runners} tool ${runners === 1 ? 'call' : 'calls'}` : ''}`}</span></div>
+      ${info.mascot ? `<div class="mascot"><img src="${info.mascot.image}" alt="" /><span><b>${escapeHtml(info.mascot.name)}</b> · ${escapeHtml(info.mascot.note)}</span></div>` : ''}</div>`;
   }
   placeCard.querySelector('.close')?.addEventListener('click', () => { cardPlace = null; renderCard(); });
 }
@@ -147,9 +148,9 @@ function renderPanel(): void {
   ];
   const sub = r.kind === 'runner' ? `tool call · ${r.role}` : r.role === 'scheduled' ? `scheduled job · keeper` : `${r.title ?? (r.memory ? 'earlier today' : r.isChild ? 'subagent' : 'session')} · ${r.role}`;
   // A team portrait is a face for the session (stable per session), never a claim about who did the work.
-  const portrait = theme === 'nordlys' ? STAFF_PORTRAITS[hashString(r.parentId ?? r.id) % STAFF_PORTRAITS.length]! : null;
+  const portrait = theme === 'nordlys' ? STAFF[hashString(r.parentId ?? r.id) % STAFF.length]! : null;
   panel.innerHTML = `
-    ${portrait ? `<figure class="avatar"><img src="${portrait}" alt="" /><figcaption>avatar</figcaption></figure>` : ''}
+    ${portrait ? `<figure class="avatar"><img src="${portrait.image}" alt="" /><figcaption>${escapeHtml(portrait.name)}<span>avatar</span></figcaption></figure>` : ''}
     <h3>${escapeHtml(r.name)}</h3>
     <div class="sub">${escapeHtml(sub)}</div>
     ${rows.map(([k, v]) => `<div class="row"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join('')}

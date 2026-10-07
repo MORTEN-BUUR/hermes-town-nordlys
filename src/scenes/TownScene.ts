@@ -12,7 +12,7 @@ import { T, TILE, paintGlow, paintShadow, paintSpark } from '../art/tiles';
 import type { Resident, TownSim } from '../sim/town';
 import type { Place } from '../sim/toolMap';
 import { MAP_H, MAP_W, type Building, type PropKind, type TownMap } from '../world/map';
-import { LAMP_TINT, NIGHT_COLD, dustSnow, paintNordlysBuilding, paintNordlysEquipment, winterGrade } from '../art/nordlys';
+import { LAMP_TINT, NIGHT_COLD, dustSnow, paintNordlysBuilding, paintNordlysEquipment, paintNordlysProp, winterGrade, type NordlysPropKind } from '../art/nordlys';
 import { NORDLYS_PLACES, type ThemeId } from '../theme';
 
 const ZOOMS = [1, 1.5, 2, 3, 4, 5];
@@ -131,6 +131,13 @@ export class TownScene extends Phaser.Scene {
     if (nordlys) {
       tex.remove('art-lamp'); tex.addCanvas('art-lamp', paintNordlysEquipment('lamp', 11, 35));
       tex.remove('art-banner'); tex.addCanvas('art-banner', paintNordlysEquipment('banner', 17, 35));
+      // The square and the memorial grove are campus-built, at the atlas sizes.
+      const campus: [NordlysPropKind, number, number][] = [
+        ['fountain', 82, 78], ['chapel', 76, 80], ['marketStall0', 54, 46], ['marketStall1', 54, 46],
+        ['noticeBoard', 26, 30], ['grave0', 17, 22], ['grave1', 15, 23], ['grave2', 14, 19], ['stall', 24, 17],
+      ];
+      for (const [kind, w, h] of campus) { tex.remove(`art-${kind}`); tex.addCanvas(`art-${kind}`, paintNordlysProp(kind, w, h)); }
+      tex.addCanvas('art-ella', paintNordlysProp('ella', 22, 13));
     }
     add('art-hedge', art.bush());
     add('art-dock', art.prop(4, 30, 18));
@@ -200,7 +207,12 @@ export class TownScene extends Phaser.Scene {
         this.dayLights.push({ x, y: foot, scale: 0.85, tint: nordlys ? LAMP_TINT : 0xf2c063, alpha: 0.3 });
       }
       if (placed.kind === 'fountain') {
-        this.add.particles(x, foot - h * 0.33, 'spark', {
+        // water in the classic town; slow holographic motes over the rings on the campus
+        this.add.particles(x, foot - h * 0.33, 'spark', nordlys ? {
+          speedX: { min: -5, max: 5 }, speedY: { min: -9, max: -3 }, gravityY: -3,
+          lifespan: 1400, frequency: 240, scale: { start: 0.3, end: 0.08 },
+          alpha: { start: 0.6, end: 0 }, tint: [0x49f2d6, 0xa98bff, 0xe8fffb],
+        } : {
           speedX: { min: -9, max: 9 }, speedY: { min: -10, max: -4 }, gravityY: 20,
           lifespan: 600, frequency: 160, scale: { start: 0.35, end: 0.1 },
           alpha: { start: 0.7, end: 0 }, tint: [0xa9d0d1, 0xe5e9d7],
@@ -208,6 +220,17 @@ export class TownScene extends Phaser.Scene {
       }
       if (placed.kind === 'fountain' || placed.kind === 'chapel' || placed.kind === 'cart' || placed.kind.startsWith('marketStall')) {
         this.add.image(x, foot - 2, 'shadow-tree').setScale(w / 22, 0.9).setDepth(-3).setAlpha(0.3);
+      }
+    }
+
+    if (nordlys) {
+      // Ella, the campus dog, asleep beside the lounge door. Presentation only: she never works.
+      const lounge = map.buildings.find((b) => b.kind === 'tavern');
+      if (lounge) {
+        const ex = (lounge.x + 2.2) * TILE, ey = (lounge.y + lounge.h) * TILE + 7;
+        this.add.image(ex, ey, 'art-ella').setOrigin(0.5, 1).setScale(0.5).setDepth(ey);
+        this.add.text(ex, ey + 1, 'Ella', { fontFamily: 'system-ui, Segoe UI, Helvetica, sans-serif', fontSize: '5px', color: '#bff7ec', backgroundColor: 'rgba(6,10,18,0.78)', padding: { x: 2, y: 1 } })
+          .setOrigin(0.5, 0).setResolution(6).setDepth(100000).setAlpha(0.85);
       }
     }
 

@@ -308,13 +308,25 @@ function datacenter(p: P, W: number, base: number, lit: boolean, seed: number): 
       p.px(x + 2 + Math.floor(r() * 6), y + 1, lit ? c : shade(c, 0.45));
     }
   }
-  // the core: concentric rings behind a round window, as in the Nordlys pictures
-  const cx = Math.round(W / 2), cy = top + 38;
-  p.disc(cx, cy, 30, NL.frame);
-  ring(p, cx, cy, 24, 4, lit ? '#2fb8c9' : '#1b5560', lit ? '#1b6f7a' : '#123a42');
-  ring(p, cx, cy, 15, 3, lit ? NL.cyan : '#226777', lit ? '#3fd0e6' : '#17485a');
-  ring(p, cx, cy, 7, 2, lit ? '#d8fbff' : '#2a7a8a', lit ? NL.cyan : '#1d5a68');
-  p.disc(cx, cy, 4, lit ? '#ffffff' : '#2f8a99');
+  // the quantum lab: a glass bay with the cryostat, gold tiers on chrome rods,
+  // the chip at the bottom. The chip glows while someone works inside.
+  const cx = Math.round(W / 2);
+  p.rect(cx - 36, top + 4, 72, wallH - 6, NL.frame);
+  for (let y = top + 7; y < top + wallH - 5; y++) p.hline(cx - 33, y, 66, mix('#102030', '#0a121c', (y - top) / wallH));
+  const y0 = top + 12;
+  const plate = (y: number, rx: number, c: string, c2: string) => { ellipseFill(p, cx, y + 1, rx, 3, c2); ellipseFill(p, cx, y, rx, 3, c); };
+  for (const rx of [-15, -6, 6, 15]) { p.vline(cx + rx, y0, 54, '#a9b0ba'); p.vline(cx + rx + 1, y0, 54, '#5d646e'); }
+  for (let i = 0; i < 5; i++) line(p, cx - 12 + i * 6, y0 + 8, cx - 8 + i * 5, y0 + 50, i % 2 ? '#b8742f' : '#8a5a2a');
+  plate(y0, 24, '#c9ced6', '#7d858f');
+  plate(y0 + 14, 19, '#d9a85a', '#8a5a2a');
+  plate(y0 + 28, 16, '#d9a85a', '#8a5a2a');
+  plate(y0 + 42, 13, '#d9a85a', '#8a5a2a');
+  plate(y0 + 58, 22, '#8d949e', '#4c535c');
+  if (lit) { ellipseFill(p, cx, y0 + 52, 10, 5, '#164e5c'); ellipseFill(p, cx, y0 + 52, 6, 3, '#2fb8c9'); }
+  p.rect(cx - 5, y0 + 49, 10, 6, '#1b2a3a');
+  p.rect(cx - 3, y0 + 51, 6, 2, lit ? '#d8fbff' : '#2a7a8a');
+  p.hline(cx - 33, top + 7, 66, NL.glassHi);
+  p.vline(cx - 1, top + 7, wallH - 12, NL.frame);
   // roof with cooling units
   flatRoof(p, x0 - 6, top - 40, x1 - x0 + 12, 40, seed + 5);
   for (let x = x0 + 10; x < x1 - 30; x += 34) {
@@ -587,4 +599,186 @@ export function paintNordlysEquipment(kind: 'anvil' | 'workbench' | 'lectern' | 
   }
   outline(p, NL.ink);
   return p.canvas;
+}
+
+// ------------------------------------------------------------- square and grove
+
+export type NordlysPropKind = 'fountain' | 'chapel' | 'marketStall0' | 'marketStall1' | 'noticeBoard' | 'grave0' | 'grave1' | 'grave2' | 'stall' | 'ella';
+
+/** An elliptical ring of light, `thick` texels wide, measured along the x radius. */
+function ellipseRing(p: P, cx: number, cy: number, rx: number, ry: number, thick: number, c: string, c2?: string): void {
+  for (let y = -ry - 1; y <= ry + 1; y++) for (let x = -rx - 1; x <= rx + 1; x++) {
+    const n = Math.sqrt((x * x) / (rx * rx) + (y * y) / (ry * ry));
+    const d = (1 - n) * rx;
+    if (d >= 0 && d <= thick) p.px(cx + x, cy + y, c2 && d > thick / 2 ? c2 : c);
+  }
+}
+
+function ellipseFill(p: P, cx: number, cy: number, rx: number, ry: number, c: string): void {
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+    if ((x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1) p.px(cx + x, cy + y, c);
+  }
+}
+
+/**
+ * Square and memorial-grove props for the campus, at the atlas world sizes so
+ * anchors, collisions and the notice-board walk stay where the sim expects.
+ */
+export function paintNordlysProp(kind: NordlysPropKind, w: number, h: number): HTMLCanvasElement {
+  const W = w * 2, H = h * 2;
+  const p = new Painter(W, H);
+  switch (kind) {
+    case 'fountain': lightRings(p, W, H); break;
+    case 'chapel': monoliths(p, W, H); break;
+    case 'marketStall0': kiosk(p, W, H, NL.teal, 1); break;
+    case 'marketStall1': kiosk(p, W, H, NL.violet, 2); break;
+    case 'noticeBoard': infoBoard(p, W, H); break;
+    case 'grave0': runestone(p, W, H, 0); break;
+    case 'grave1': runestone(p, W, H, 1); break;
+    case 'grave2': runestone(p, W, H, 2); break;
+    case 'stall': counter(p, W, H); break;
+    case 'ella': dog(p, W, H); break;
+  }
+  outline(p, NL.ink);
+  return p.canvas;
+}
+
+/** The heart of the square: a granite disc with rings of light and a hologram of the mark. */
+function lightRings(p: P, W: number, H: number): void {
+  const cx = Math.round(W / 2), cy = H - 34;
+  ellipseFill(p, cx, cy + 3, 78, 32, '#1b2130');
+  ellipseFill(p, cx, cy, 78, 32, NL.granite);
+  ellipseFill(p, cx, cy - 1, 76, 30, '#333a49');
+  p.noise(cx - 78, cy - 32, 156, 64, '#3e4656', 0.05, 4);
+  ellipseRing(p, cx, cy, 66, 27, 3, NL.teal, '#2fb8a8');
+  ellipseRing(p, cx, cy, 48, 20, 2, NL.gold, '#c98a3a');
+  ellipseRing(p, cx, cy, 30, 12, 2, NL.violet, '#6f58b8');
+  // pedestal
+  p.rect(cx - 14, cy - 12, 28, 16, NL.metal2);
+  p.rect(cx - 14, cy - 12, 28, 2, '#3a4458');
+  ellipseFill(p, cx, cy - 12, 14, 5, '#2d3547');
+  ellipseRing(p, cx, cy - 12, 12, 4, 1, NL.cyan);
+  // the hologram: beam, floating mark, a few motes. Static art, never activity.
+  for (let y = cy - 16; y > 44; y -= 2) p.px(cx, y, y % 4 ? '#2a8f95' : NL.cyan);
+  for (let x = -2; x <= 2; x++) p.px(cx + x, cy - 15, NL.cyan);
+  mark(p, cx, 46, 22, NL.cyan);
+  mark(p, cx, 46, 23, '#1f7f78');
+  p.disc(cx, 46, 2, '#e8fffb');
+  for (const [mx, my] of [[-30, 60], [28, 40], [-18, 24], [34, 72], [10, 18]] as const) p.px(cx + mx, my, NL.violet);
+}
+
+/** The memorial grove's centre: three basalt monoliths over a ring of light. */
+function monoliths(p: P, W: number, H: number): void {
+  const cx = Math.round(W / 2), base = H - 20;
+  ellipseFill(p, cx, base + 2, 70, 18, '#1b2130');
+  ellipseFill(p, cx, base, 70, 18, NL.granite);
+  ellipseRing(p, cx, base, 60, 14, 1, NL.teal, NL.tealDim);
+  const slab = (x0: number, top: number, width: number, lean: number, seed: number) => {
+    const r = mulberry(seed);
+    for (let y = top; y < base + 4; y++) {
+      const t = (y - top) / (base + 4 - top);
+      const x = Math.round(x0 + lean * (1 - t));
+      const wv = width + Math.round(Math.sin(y * 0.3 + seed) * 1.5);
+      p.hline(x, y, wv, y - top < 3 ? NL.snow : NL.timber);
+      p.px(x, y, y - top < 3 ? NL.snow2 : '#334052');
+      if (r() < 0.08) p.px(x + 1 + Math.floor(r() * (wv - 2)), y, '#2a3344');
+    }
+    // a rune line down the slab, lit from the ring below
+    const rx = Math.round(x0 + width / 2);
+    for (let y = top + 10; y < base - 4; y += 2) p.px(Math.round(rx + lean * (1 - (y - top) / (base - top))), y, y % 6 ? NL.tealDim : NL.teal);
+    for (const dy of [16, 34, 52]) {
+      const y = top + dy, x = Math.round(rx + lean * (1 - (y - top) / (base - top)));
+      if (y < base - 8) { p.px(x + 1, y + 1, NL.teal); p.px(x + 2, y + 2, NL.teal); p.px(x - 1, y + 1, NL.teal); }
+    }
+  };
+  slab(cx - 52, 40, 22, 14, 1);
+  slab(cx + 30, 46, 22, -14, 2);
+  slab(cx - 13, 14, 26, 0, 3);
+  // the light between them
+  ellipseFill(p, cx, base - 6, 9, 4, '#1b5560');
+  ellipseFill(p, cx, base - 7, 6, 2, NL.cyan);
+  p.px(cx, base - 8, '#e8fffb');
+}
+
+/** A market kiosk: cantilevered snow roof, LED fascia, glass front, a counter. */
+function kiosk(p: P, W: number, H: number, led: string, seed: number): void {
+  const b = H - 1;
+  p.rect(10, 36, W - 20, b - 38, NL.metal2);
+  for (let x = 13; x < W - 12; x += 7) p.vline(x, 40, b - 44, NL.metal);
+  glass(p, 20, 44, W - 40, 26, false, 22, seed);
+  p.rect(28, 48, 18, 10, '#0f2e3a'); p.hline(30, 50, 12, led); p.hline(30, 53, 8, shade(led, 0.7));
+  p.rect(14, 70, W - 28, 10, NL.timber3); p.hline(14, 70, W - 28, NL.cedar2);
+  p.rect(4, 34, 4, b - 36, NL.metal); p.rect(W - 8, 34, 4, b - 36, NL.metal);
+  p.rect(2, 26, W - 4, 8, NL.roof);
+  snowField(p, 2, 20, W - 4, 8, seed);
+  p.rect(2, 32, W - 4, 3, NL.ink);
+  led2(p, 2, 35, W - 4, led);
+  mark(p, W - 18, 58, 4, led);
+  p.rect(6, b - 2, W - 12, 2, NL.granite2);
+}
+
+function led2(p: P, x: number, y: number, w: number, c: string): void { p.hline(x, y, w, c); p.hline(x, y + 1, w, shade(c, 0.45)); }
+
+/** The notice board: a slim information pillar with a lit screen. */
+function infoBoard(p: P, W: number, H: number): void {
+  const cx = Math.round(W / 2);
+  p.rect(cx - 3, 36, 6, H - 36, NL.metal2);
+  p.rect(cx - 10, H - 3, 20, 3, NL.granite2);
+  p.rect(4, 4, W - 8, 36, NL.frame);
+  p.rect(7, 7, W - 14, 30, '#0f2e3a');
+  for (let y = 11; y < 33; y += 4) p.hline(10, y, W - 24 - ((y / 4) % 3) * 6, y === 11 ? NL.cyan : '#2fb8c9');
+  mark(p, W - 12, 12, 3, NL.teal);
+  p.hline(4, 40, W - 8, NL.teal);
+}
+
+/** A standing stone with a lit rune line; three silhouettes. */
+function runestone(p: P, W: number, H: number, variant: number): void {
+  const b = H - 1;
+  ellipseFill(p, Math.round(W / 2), b - 2, Math.round(W / 2) - 2, 3, NL.snow2);
+  const top = [4, 6, 8][variant]!, lean = [1, -2, 0][variant]!;
+  for (let y = top; y < b - 2; y++) {
+    const t = (y - top) / (b - 2 - top);
+    const half = Math.round((W / 2 - 4) * (0.55 + 0.45 * Math.sin(Math.min(1, t * 1.3) * Math.PI / 2)));
+    const x = Math.round(W / 2 + lean * (1 - t));
+    p.hline(x - half, y, half * 2, y - top < 2 ? NL.snow : NL.granite);
+    p.px(x - half, y, y - top < 2 ? NL.snow2 : NL.granite2);
+    p.px(x + half - 1, y, '#2a3140');
+  }
+  const rx = Math.round(W / 2);
+  for (let y = top + 6; y < b - 8; y += 2) p.px(Math.round(rx + lean * (1 - (y - top) / (b - top))), y, y % 4 ? NL.tealDim : NL.teal);
+  const ty = top + 10 + variant * 3, tx = Math.round(rx + lean * (1 - (ty - top) / (b - top)));
+  p.px(tx + 1, ty + 1, NL.teal); p.px(tx + 2, ty + 2, NL.teal); p.px(tx - 1, ty + 3, NL.teal);
+}
+
+/** A skill counter: a slab on black legs with a small screen. */
+function counter(p: P, W: number, H: number): void {
+  p.rect(2, 10, W - 4, 7, NL.timber3);
+  p.hline(2, 10, W - 4, NL.teal);
+  p.rect(4, 17, 4, H - 17, NL.metal2); p.rect(W - 8, 17, 4, H - 17, NL.metal2);
+  p.rect(W / 2 - 7, 2, 14, 8, NL.frame); p.rect(W / 2 - 5, 4, 10, 4, '#2fb8c9'); p.hline(W / 2 - 4, 5, 6, '#c8fbff');
+}
+
+/** Ella, the campus dog: a red Staffordshire bull terrier with a white blaze, chest and paws, lying down. */
+function dog(p: P, W: number, H: number): void {
+  const b = H - 1;
+  const coat = '#b5582c', coat2 = '#8a3f1f', coat3 = '#d07a42', white = '#f3ece4';
+  const cx = Math.round(W / 2);
+  ellipseFill(p, cx + 2, b - 1, cx - 3, 3, NL.snow2);
+  // body, lying with the front legs stretched forward
+  ellipseFill(p, cx + 6, b - 8, 15, 6, coat);
+  ellipseFill(p, cx + 6, b - 11, 11, 3, coat3);
+  ellipseFill(p, cx + 8, b - 5, 11, 3, coat2);
+  p.rect(8, b - 7, 12, 3, coat2); p.rect(6, b - 10, 3, 2, white);
+  p.rect(6, b - 5, 12, 3, coat); p.rect(4, b - 5, 4, 3, white); p.px(5, b - 3, '#c9bfb3');
+  // white chest between the legs
+  p.rect(13, b - 10, 6, 5, white);
+  // head turned to the viewer: blaze, muzzle, nose, eyes, rose ears
+  ellipseFill(p, 12, b - 14, 7, 6, coat);
+  p.rect(11, b - 20, 2, 7, white);
+  ellipseFill(p, 8, b - 12, 4, 3, white);
+  p.rect(4, b - 14, 3, 2, NL.ink); p.px(5, b - 13, '#2c2c34');
+  p.px(9, b - 16, NL.ink); p.px(14, b - 16, NL.ink); p.px(10, b - 16, '#3a3a44');
+  p.rect(5, b - 20, 4, 3, coat2); p.rect(15, b - 20, 4, 3, coat2); p.px(16, b - 19, '#c98a6a');
+  // tail along the hip
+  for (let i = 0; i < 7; i++) p.px(W - 6 + Math.round(Math.sin(i * 0.8) * 2), b - 11 + i, coat2);
 }
