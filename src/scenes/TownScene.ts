@@ -12,6 +12,8 @@ import { T, TILE, paintGlow, paintShadow, paintSpark } from '../art/tiles';
 import type { Resident, TownSim } from '../sim/town';
 import type { Place } from '../sim/toolMap';
 import { MAP_H, MAP_W, type Building, type PropKind, type TownMap } from '../world/map';
+import { LAMP_TINT, NIGHT_COLD, dustSnow, paintNordlysBuilding, paintNordlysEquipment, winterGrade } from '../art/nordlys';
+import { NORDLYS_PLACES, type ThemeId } from '../theme';
 
 const ZOOMS = [1, 1.5, 2, 3, 4, 5];
 
@@ -41,6 +43,7 @@ export interface SceneOptions {
   map: TownMap;
   sim: TownSim;
   hour: number | null;
+  theme: ThemeId;
   onSelect: (id: string | null) => void;
 }
 
@@ -86,9 +89,19 @@ export class TownScene extends Phaser.Scene {
   create(): void {
     const { map } = this.opts;
     const tex = this.textures;
-    const add = (key: string, c: HTMLCanvasElement) => tex.addCanvas(key, c);
+    const nordlys = this.opts.theme === 'nordlys';
+    const add = (key: string, c: HTMLCanvasElement) => {
+      if (nordlys && key.startsWith('art-')) {
+        // The authored atlases are a summer village; regrade them to the winter campus.
+        if (key.startsWith('art-tree') || key === 'art-bush' || key === 'art-hedge') { winterGrade(c, 'foliage'); dustSnow(c, 0.55, hashString(key)); }
+        else { winterGrade(c, 'built'); if (key === 'art-rock' || key === 'art-chapel' || key === 'art-fountain') dustSnow(c, 0.6, hashString(key)); }
+      }
+      return tex.addCanvas(key, c);
+    };
     const art = new ReferenceArt(Object.fromEntries(Object.keys(REFERENCE_ATLASES).map(key => [key, tex.get(`reference-${key}`).getSourceImage()])) as Record<keyof typeof REFERENCE_ATLASES, HTMLImageElement>);
-    add('terrain', paintTerrain(map));
+    const terrain = paintTerrain(map);
+    if (nordlys) winterGrade(terrain, 'ground');
+    add('terrain', terrain);
     add('glow', paintGlow()); add('spark', paintSpark());
     add('shadow-tree', paintShadow(26, 10)); add('shadow-char', paintShadow(12, 5));
     for (const e of ['ok', 'fail', 'think', 'zzz', 'wait'] as const) add(`emote-${e}`, paintEmote(e));
@@ -111,41 +124,55 @@ export class TownScene extends Phaser.Scene {
       ['anvil', 0, 19, 17], ['workbench', 1, 25, 18], ['lectern', 2, 17, 21],
       ['telescope', 3, 23, 27], ['postbox', 4, 13, 21], ['desk', 5, 24, 18], ['stall', 6, 24, 17],
     ];
-    for (const [key, index, w, h] of equipment) add(`art-${key}`, art.equipment(index, w, h));
+    for (const [key, index, w, h] of equipment) {
+      if (nordlys && key !== 'stall') tex.addCanvas(`art-${key}`, paintNordlysEquipment(key as 'anvil', w, h));
+      else add(`art-${key}`, art.equipment(index, w, h));
+    }
+    if (nordlys) {
+      tex.remove('art-lamp'); tex.addCanvas('art-lamp', paintNordlysEquipment('lamp', 11, 35));
+      tex.remove('art-banner'); tex.addCanvas('art-banner', paintNordlysEquipment('banner', 17, 35));
+    }
     add('art-hedge', art.bush());
     add('art-dock', art.prop(4, 30, 18));
 
     this.add.image(0, 0, 'terrain').setOrigin(0, 0).setScale(0.5).setDepth(-11);
-    add('structures', paintStructures(map, art));
+    const structures = paintStructures(map, art);
+    if (nordlys) winterGrade(structures, 'built');
+    add('structures', structures);
     this.add.image(0, 0, 'structures').setOrigin(0, 0).setScale(0.5).setDepth(-2);
 
     // buildings
     for (const b of [...map.buildings, ...map.homes]) {
-      const lit = art.building(b.kind, b.w * TILE + 6, true);
-      const dark = art.building(b.kind, b.w * TILE + 6, false);
+      const lit = nordlys ? paintNordlysBuilding(b.kind, b.w * TILE + 6, true, b.id) : art.building(b.kind, b.w * TILE + 6, true);
+      const dark = nordlys ? paintNordlysBuilding(b.kind, b.w * TILE + 6, false, b.id) : art.building(b.kind, b.w * TILE + 6, false);
       const litKey = `b-${b.id}-lit`, darkKey = `b-${b.id}-dark`;
       add(litKey, lit); add(darkKey, dark);
       const baseY = (b.y + b.h) * TILE;
       // a soft pool of shadow under the wall, never a box
       this.add.image((b.x + b.w / 2) * TILE, baseY + 2, 'shadow-tree').setScale((b.w * TILE) / 22, 1.1).setDepth(-5).setAlpha(0.35);
-      if (b.kind === 'forge') this.dayLights.push({ x: (b.x + b.w / 2) * TILE, y: baseY + 6, scale: 1.1, tint: 0xf28b3c, alpha: 0.35 });
+      if (b.kind === 'forge') this.dayLights.push({ x: (b.x + b.w / 2) * TILE, y: baseY + 6, scale: 1.1, tint: nordlys ? 0x49f2d6 : 0xf28b3c, alpha: nordlys ? 0.22 : 0.35 });
       else if (b.kind === 'tavern') this.dayLights.push({ x: (b.x + b.w / 2) * TILE, y: baseY + 4, scale: 0.9, tint: 0xf2c063, alpha: 0.22 });
       else if (b.kind === 'house') this.dayLights.push({ x: (b.x + b.w / 2) * TILE, y: baseY - 6, scale: 0.5, tint: 0xf6c15a, alpha: 0.12 });
       else this.dayLights.push({ x: (b.x + b.w / 2) * TILE, y: baseY - 4, scale: 0.8, tint: 0xf6c15a, alpha: 0.14 });
       const image = this.add.image(b.x * TILE - 3, baseY, darkKey).setOrigin(0, 1).setScale(0.5).setDepth(baseY - 4);
       let smoke: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-      if (b.kind === 'forge' || b.kind === 'workshop' || b.kind === 'tavern') {
-        const cx = (b.x + b.w) * TILE - (b.kind === 'forge' ? 8 : 11);
-        const cy = baseY - lit.height / 2 + (b.kind === 'forge' ? 0 : 4);
+      if (b.kind === 'forge' || (b.kind === 'workshop' && !nordlys) || b.kind === 'tavern') {
+        // Nordlys: the lounge chimney, and steam over the datacenter's cooling units.
+        const cx = nordlys ? b.x * TILE - 3 + (b.kind === 'forge' ? lit.width / 4 : (lit.width - 40) / 2)
+          : (b.x + b.w) * TILE - (b.kind === 'forge' ? 8 : 11);
+        const cy = nordlys ? baseY - (b.kind === 'forge' ? 62 : 66) : baseY - lit.height / 2 + (b.kind === 'forge' ? 0 : 4);
         smoke = this.add.particles(cx, cy, 'spark', {
           speedY: { min: -14, max: -22 }, speedX: { min: -4, max: 4 }, lifespan: 2600,
-          scale: { start: 1.2, end: 3.2 }, alpha: { start: 0.55, end: 0 }, tint: 0x9a9aa0,
+          scale: { start: 1.2, end: 3.2 }, alpha: { start: 0.55, end: 0 }, tint: nordlys ? 0xdfe8f2 : 0x9a9aa0,
           frequency: 260, quantity: 1, emitting: false,
         }).setDepth(baseY - 3);
       }
       this.buildingViews.push({ building: b, image, litKey, darkKey, lit: false, smoke, glowX: (b.x + b.w / 2) * TILE, glowY: baseY - 10 });
       if (b.kind !== 'house') {
-        this.add.text((b.x + b.w / 2) * TILE, baseY + 3, b.label, { fontFamily: 'monospace', fontSize: '6px', color: '#e9dfc8', backgroundColor: 'rgba(20,17,26,0.7)', padding: { x: 2, y: 1 } })
+        const label = nordlys ? NORDLYS_PLACES[b.kind].name : b.label;
+        this.add.text((b.x + b.w / 2) * TILE, baseY + 3, label, nordlys
+          ? { fontFamily: 'system-ui, Segoe UI, Helvetica, sans-serif', fontSize: '6px', fontStyle: '600', color: '#bff7ec', backgroundColor: 'rgba(6,10,18,0.78)', padding: { x: 3, y: 1 } }
+          : { fontFamily: 'monospace', fontSize: '6px', color: '#e9dfc8', backgroundColor: 'rgba(20,17,26,0.7)', padding: { x: 2, y: 1 } })
           .setOrigin(0.5, 0).setResolution(6).setDepth(100000).setAlpha(0.9);
       }
     }
@@ -161,7 +188,7 @@ export class TownScene extends Phaser.Scene {
       const img = this.add.image(x, foot, key).setOrigin(0.5, 1).setScale(0.5).setDepth(foot - (placed.kind === 'tree' ? 6 : 2));
       const variation = hashString(`${placed.x},${placed.y}`);
       if (placed.kind === 'tree') {
-        img.setTint([0xe2ebe1, 0xc4d9d1, 0xe2dfb9, 0xd2e3d0][variation % 4]!);
+        img.setTint((nordlys ? [0xe6eef6, 0xd2e0ea, 0xdce8ee, 0xc8d6e2] : [0xe2ebe1, 0xc4d9d1, 0xe2dfb9, 0xd2e3d0])[variation % 4]!);
         img.setFlipX(variation % 3 === 0);
         this.swaying.push({ obj: img, phase: variation % 100 / 100, amount: 0.008 });
         this.add.image(x - 5, foot - 4, 'shadow-tree').setScale(w / 23, 1.5).setDepth(-4).setAlpha(0.65);
@@ -170,7 +197,7 @@ export class TownScene extends Phaser.Scene {
       }
       if (placed.kind === 'lamp') {
         this.lampPositions.push({ x, y: foot - h + 8 });
-        this.dayLights.push({ x, y: foot, scale: 0.85, tint: 0xf2c063, alpha: 0.3 });
+        this.dayLights.push({ x, y: foot, scale: 0.85, tint: nordlys ? LAMP_TINT : 0xf2c063, alpha: 0.3 });
       }
       if (placed.kind === 'fountain') {
         this.add.particles(x, foot - h * 0.33, 'spark', {
@@ -219,9 +246,9 @@ export class TownScene extends Phaser.Scene {
     for (const l of this.dayLights) {
       this.add.image(l.x, l.y, 'glow').setScale(l.scale, l.scale * 0.55).setTint(l.tint).setAlpha(l.alpha).setBlendMode(Phaser.BlendModes.ADD).setDepth(-2);
     }
-    // golden grade: the whole world sits in warm late light
-    this.add.rectangle(0, 0, MAP_W * TILE, MAP_H * TILE, 0xf6dfb4, 1).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(197500).setAlpha(0.3);
-    this.add.rectangle(0, 0, MAP_W * TILE, MAP_H * TILE, 0xffc070, 1).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(197501).setAlpha(0.015);
+    // grade: warm late light in the classic town, cold blue hour on the Nordlys campus
+    this.add.rectangle(0, 0, MAP_W * TILE, MAP_H * TILE, nordlys ? 0xc4d4ee : 0xf6dfb4, 1).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(197500).setAlpha(0.3);
+    this.add.rectangle(0, 0, MAP_W * TILE, MAP_H * TILE, nordlys ? 0x40e0c8 : 0xffc070, 1).setOrigin(0, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(197501).setAlpha(nordlys ? 0.02 : 0.015);
     this.stamp = this.make.image({ key: 'glow', add: false });
     this.night = this.add.renderTexture(0, 0, MAP_W * TILE, MAP_H * TILE).setOrigin(0, 0).setDepth(200000);
     this.night.setBlendMode(Phaser.BlendModes.MULTIPLY);
@@ -237,9 +264,10 @@ export class TownScene extends Phaser.Scene {
     hz.width = 256; hz.height = 256;
     const hctx = hz.getContext('2d')!;
     const grad = hctx.createRadialGradient(128, 128, 40, 128, 128, 150);
-    grad.addColorStop(0, 'rgba(178,190,200,0)');
-    grad.addColorStop(0.75, 'rgba(178,190,200,0.18)');
-    grad.addColorStop(1, 'rgba(178,190,200,0.55)');
+    const hazeRgb = nordlys ? '14,22,44' : '178,190,200';
+    grad.addColorStop(0, `rgba(${hazeRgb},0)`);
+    grad.addColorStop(0.75, `rgba(${hazeRgb},0.18)`);
+    grad.addColorStop(1, `rgba(${hazeRgb},0.55)`);
     hctx.fillStyle = grad; hctx.fillRect(0, 0, 256, 256);
     tex.addCanvas(hazeKey, hz);
     this.add.image(0, 0, hazeKey).setOrigin(0, 0).setDisplaySize(MAP_W * TILE, MAP_H * TILE).setDepth(198000).setAlpha(0.22);
@@ -505,9 +533,9 @@ export class TownScene extends Phaser.Scene {
   private makeView(r: Resident): ResidentView {
     // Looks are bucketed so a crowd shares sprite sheets: at most 16 per role.
     const bucket = `${r.role}-${hashString(r.parentId ?? r.id) % 16}`;
-    const key = `char-${bucket}`;
+    const key = `char-${this.opts.theme}-${bucket}`;
     if (!this.textures.exists(key)) {
-      this.textures.addSpriteSheet(key, paintCharacterSheet(lookFor(bucket, r.role)) as unknown as HTMLImageElement, { frameWidth: FRAME_W * CHARACTER_SCALE, frameHeight: FRAME_H * CHARACTER_SCALE, endFrame: FRAME_COUNT - 1 });
+      this.textures.addSpriteSheet(key, paintCharacterSheet(lookFor(bucket, r.role, this.opts.theme)) as unknown as HTMLImageElement, { frameWidth: FRAME_W * CHARACTER_SCALE, frameHeight: FRAME_H * CHARACTER_SCALE, endFrame: FRAME_COUNT - 1 });
     }
     const sprite = this.add.sprite(r.x, r.y, key, idleFrame('down', 0)).setOrigin(0.5, CHARACTER_BASELINE / FRAME_H).setScale((r.kind === 'runner' ? 0.8 : 1) / CHARACTER_SCALE);
     const shadow = this.add.image(r.x, r.y, 'shadow-char').setOrigin(0.5, 0.5);
@@ -558,7 +586,9 @@ export class TownScene extends Phaser.Scene {
   darkness(): number {
     const h = this.opts.hour ?? (new Date().getHours() + new Date().getMinutes() / 60);
     const t = Math.cos(((h - 13) / 24) * Math.PI * 2);
-    return Phaser.Math.Clamp((0.5 - t * 0.5) * 0.78, 0, 0.78);
+    const d = Phaser.Math.Clamp((0.5 - t * 0.5) * 0.78, 0, 0.78);
+    // The Nordlys campus lives in the blue hour: never brighter than dusk.
+    return this.opts.theme === 'nordlys' ? Math.max(d, 0.5) : d;
   }
 
   private drawNight(): void {
@@ -567,8 +597,9 @@ export class TownScene extends Phaser.Scene {
     this.night.clear();
     if (d < 0.05) { this.night.setVisible(false); return; }
     this.night.setVisible(true);
-    const warm = Phaser.Display.Color.ValueToColor(0xb08a6a);
-    const cold = Phaser.Display.Color.ValueToColor(0x2a3550);
+    const warm = Phaser.Display.Color.ValueToColor(this.opts.theme === 'nordlys' ? 0x7f90b8 : 0xb08a6a);
+    const nordlys = this.opts.theme === 'nordlys';
+    const cold = Phaser.Display.Color.ValueToColor(nordlys ? NIGHT_COLD : 0x2a3550);
     const mix = Phaser.Display.Color.Interpolate.ColorWithColor(warm, cold, 100, Math.round(Phaser.Math.Clamp((d - 0.2) / 0.6, 0, 1) * 100));
     const base = Phaser.Display.Color.GetColor(mix.r, mix.g, mix.b);
     const bright = Phaser.Display.Color.ValueToColor(0xffffff);
@@ -580,7 +611,9 @@ export class TownScene extends Phaser.Scene {
       stamp.setPosition(x, y).setScale(scale).setAlpha(alpha);
       this.night.draw(stamp);
     };
+    if (nordlys) stamp.setTint(LAMP_TINT);
     for (const l of this.lampPositions) draw(l.x, l.y, 0.9, d * 0.9);
+    if (nordlys) stamp.setTint(0xf2c063);
     for (const bv of this.buildingViews) if (bv.lit) draw(bv.glowX, bv.glowY, bv.building.kind === 'house' ? 0.7 : bv.building.kind === 'tavern' || bv.building.kind === 'forge' ? 1.7 : 1.3, d * (bv.building.kind === 'tavern' || bv.building.kind === 'forge' ? 0.8 : 0.55));
     for (const r of this.opts.sim.residents.values()) if (r.anim === 'work' && r.station && r.station.prop.kind === 'anvil') draw(r.x, r.y, 0.6, d * 0.8);
   }

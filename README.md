@@ -2,7 +2,29 @@
 
 A local pixel-art interface for Hermes Agent. Every resident represents a real Hermes execution context. Tool calls send residents to the library, workshop, forge, post office, observatory, or town hall. Completed sessions rest at the tavern and eventually walk home.
 
-![Hermes Town](artifacts/world-remodel.png)
+![Hermes Town in the Nordlys theme](artifacts/nordlys-campus.jpg)
+
+## Nordlys edition
+
+This fork dresses the town as the Nordlys datacenter campus from Norway AI: modern Nordic architecture under the polar night, snow, aurora, and the Nordlys mark. The work vocabulary is unchanged; only names and art move.
+
+| Campus place | Classic place | What sends a runner there |
+|---|---|---|
+| AI-paviljongen | Town hall | planning, delegation and model turns |
+| Arkivet | Library | reading files, search and memory |
+| Verkstedet | Workshop | editing, writing and patching |
+| Datasenteret | Forge | shell commands, tests and builds |
+| Portalen | Post office | git, GitHub and messages out |
+| Observatoriet | Observatory | web search and browsing |
+| Loungen | Tavern | finished sessions resting between turns |
+| Torget | Market | skills and unknown tools |
+
+- Buildings, workstations, lamps and banners are painted in code (`src/art/nordlys.ts`); the authored atlases are regraded to winter.
+- Choosing a place opens a card with the Nordlys picture of it and how many residents are working there right now.
+- The inspector shows a Nordlys team portrait as the session's avatar. It is picked by a stable hash and never claims that a person did the work.
+- Aurora and snow (`src/hud/sky.ts`) are ambience only and never react to Hermes events.
+- `?theme=classic` (or `VITE_DEFAULT_THEME=classic` at build time) restores the original medieval town.
+
 
 > v0.3.0 packages the bridge, local server, and prebuilt town together. Runtime use needs Hermes and Node.js, not a repository checkout, npm, or a frontend build. Catalog availability follows a separately reviewed pin update.
 

@@ -7,6 +7,9 @@ import { TownScene } from './scenes/TownScene';
 import { TownSim } from './sim/town';
 import { PLACE_LABEL, type Place } from './sim/toolMap';
 import { MAP_H, MAP_W, buildTownMap } from './world/map';
+import { CAMPUS_IMAGE, GUIDE_IMAGE, NORDLYS_PLACES, STAFF_PORTRAITS, resolveTheme } from './theme';
+import { startSky } from './hud/sky';
+import { hashString } from './art/painter';
 
 
 const params = new URLSearchParams(location.search);
@@ -16,6 +19,8 @@ const agentsParam = params.get('agents') ?? import.meta.env.VITE_DEFAULT_AGENTS 
 const mode = agentsParam === 'demo' ? 'demo' : 'live';
 const hourParam = params.get('hour');
 const hour = hourParam !== null && Number.isFinite(Number(hourParam)) ? Number(hourParam) : null;
+const theme = resolveTheme(location.search, import.meta.env.VITE_DEFAULT_THEME);
+document.body.classList.add(`theme-${theme}`);
 
 const map = buildTownMap();
 const sim = new TownSim(map);
@@ -39,7 +44,7 @@ const game = new Phaser.Game({
   pixelArt: true,
   fps: { forceSetTimeOut: true, target: 60 },
   roundPixels: true,
-  backgroundColor: '#1a1620',
+  backgroundColor: theme === 'nordlys' ? '#070b14' : '#1a1620',
   scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER },
   scene: [],
 });
@@ -53,6 +58,7 @@ game.scene.add('town', TownScene, true, {
   map,
   sim,
   hour,
+  theme,
   onSelect: (id: string | null) => { selectedId = id; renderPanel(); },
 });
 game.events.once("ready", () => { scene = game.scene.getScene("town") as TownScene; });
@@ -61,10 +67,44 @@ source.start();
 
 // ------------------------------------------------------------------ HUD
 
+const placeCard = $('#place-card');
+let cardPlace: Place | 'campus' | null = null;
 for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-goto]')) {
-  btn.addEventListener('click', () => scene?.goTo(btn.dataset.goto!));
+  const place = btn.dataset.goto as Place;
+  if (theme === 'nordlys') btn.innerHTML = `<span class="nm">${escapeHtml(NORDLYS_PLACES[place].name)}</span><span class="en">${escapeHtml(PLACE_LABEL[place])}</span>`;
+  btn.addEventListener('click', () => { scene?.goTo(place); showCard(place); });
 }
-$('#overview').addEventListener('click', () => { scene?.overview(); renderStatus(); });
+if (theme === 'nordlys') {
+  $('#overview').innerHTML = '<span class="nm">Campus</span><span class="en">Town view</span>';
+  $('#overview').setAttribute('aria-label', 'Town view');
+  $<HTMLImageElement>('#guide-portrait').src = GUIDE_IMAGE;
+  startSky($('#hud'), () => scene?.darkness() ?? 0.4);
+}
+$('#overview').addEventListener('click', () => { scene?.overview(); showCard('campus'); renderStatus(); });
+
+/** The place card: the Nordlys picture of a place and what is there right now. */
+function showCard(place: Place | 'campus'): void {
+  if (theme !== 'nordlys') return;
+  cardPlace = place;
+  renderCard();
+}
+function renderCard(): void {
+  if (!cardPlace) { placeCard.hidden = true; return; }
+  placeCard.hidden = false;
+  if (cardPlace === 'campus') {
+    placeCard.innerHTML = `<button class="close" aria-label="Close">×</button><img src="${CAMPUS_IMAGE}" alt="" />
+      <div class="body"><h3>Nordlys campus</h3><div class="sub">Every figure is a real Hermes session, subagent or tool call.</div></div>`;
+  } else {
+    const info = NORDLYS_PLACES[cardPlace];
+    const here = [...sim.residents.values()].filter((r) => r.place === cardPlace && r.state === 'working');
+    const runners = here.filter((r) => r.kind === 'runner').length;
+    placeCard.innerHTML = `<button class="close" aria-label="Close">×</button><img src="${info.image}" alt="" />
+      <div class="body"><h3>${escapeHtml(info.name)} <span>${escapeHtml(info.classic)}</span></h3>
+      <div class="sub">${escapeHtml(info.work)}</div>
+      <div class="row"><span>here now</span><span>${here.length === 0 ? 'nobody' : `${here.length} working${runners ? ` · ${runners} tool ${runners === 1 ? 'call' : 'calls'}` : ''}`}</span></div></div>`;
+  }
+  placeCard.querySelector('.close')?.addEventListener('click', () => { cardPlace = null; renderCard(); });
+}
 directorBtn.addEventListener('click', () => {
   if (!scene) return;
   scene.setDirector(!scene.isDirector());
@@ -93,7 +133,7 @@ function renderPanel(): void {
   const r = selectedId ? sim.residents.get(selectedId) : null;
   if (!r) { panel.hidden = true; return; }
   panel.hidden = false;
-  const place = r.place ? PLACE_LABEL[r.place] : r.state === 'leaving' ? 'going home' : r.state === 'waiting' ? 'at the front door' : r.state === 'posted' ? 'at its post' : r.state === 'returning' ? 'coming back' : 'on the road';
+  const place = r.place ? (theme === 'nordlys' ? `${NORDLYS_PLACES[r.place].name} (${PLACE_LABEL[r.place]})` : PLACE_LABEL[r.place]) : r.state === 'leaving' ? 'going home' : r.state === 'waiting' ? 'at the front door' : r.state === 'posted' ? 'at its post' : r.state === 'returning' ? 'coming back' : 'on the road';
   const parent = r.parentId ? sim.residents.get(r.parentId) : null;
   const runnersOut = r.kind === 'session' ? sim.runners().filter((x) => x.parentId === r.id).length : 0;
   const rows: [string, string][] = [
@@ -106,7 +146,10 @@ function renderPanel(): void {
     ['last event', `${ago(sim.now() - r.lastEventAt)} ago`],
   ];
   const sub = r.kind === 'runner' ? `tool call · ${r.role}` : r.role === 'scheduled' ? `scheduled job · keeper` : `${r.title ?? (r.memory ? 'earlier today' : r.isChild ? 'subagent' : 'session')} · ${r.role}`;
+  // A team portrait is a face for the session (stable per session), never a claim about who did the work.
+  const portrait = theme === 'nordlys' ? STAFF_PORTRAITS[hashString(r.parentId ?? r.id) % STAFF_PORTRAITS.length]! : null;
   panel.innerHTML = `
+    ${portrait ? `<figure class="avatar"><img src="${portrait}" alt="" /><figcaption>avatar</figcaption></figure>` : ''}
     <h3>${escapeHtml(r.name)}</h3>
     <div class="sub">${escapeHtml(sub)}</div>
     ${rows.map(([k, v]) => `<div class="row"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join('')}
@@ -168,6 +211,13 @@ base.width = MAP_W; base.height = MAP_H;
   const c = base.getContext('2d')!;
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     const g = map.ground[y]![x]!;
+    if (theme === 'nordlys') {
+      c.fillStyle = g === T.water || g === T.water2 || g === T.water3 ? '#123049'
+        : g === T.cobble || g === T.cobble2 || g === T.path || g === T.path2 || g === T.bridge || g === T.trail || g === T.trail2 ? '#5d6a80'
+        : g === T.ledge || g === T.cliff ? '#2f3646' : '#c9d6e6';
+      c.fillRect(x, y, 1, 1);
+      continue;
+    }
     c.fillStyle = g === T.water || g === T.water2 || g === T.water3 ? '#2f5566'
       : g === T.cobble || g === T.cobble2 ? '#6f6a68'
       : g === T.path || g === T.path2 || g === T.bridge ? '#8a6a44'
@@ -178,8 +228,8 @@ base.width = MAP_W; base.height = MAP_H;
       : '#4f6b34';
     c.fillRect(x, y, 1, 1);
   }
-  for (const p of map.props) if (p.kind === 'tree') { c.fillStyle = '#2f5228'; c.fillRect(Math.floor((p.x + 16) / TILE), Math.floor((p.y + 34) / TILE), 1, 1); }
-  for (const b of [...map.buildings, ...map.homes]) { c.fillStyle = b.kind === 'house' ? '#6b3d2a' : '#c9b391'; c.fillRect(b.x, b.y, b.w, b.h); }
+  for (const p of map.props) if (p.kind === 'tree') { c.fillStyle = theme === 'nordlys' ? '#1f3a3c' : '#2f5228'; c.fillRect(Math.floor((p.x + 16) / TILE), Math.floor((p.y + 34) / TILE), 1, 1); }
+  for (const b of [...map.buildings, ...map.homes]) { c.fillStyle = theme === 'nordlys' ? (b.kind === 'house' ? '#26304a' : '#49f2d6') : b.kind === 'house' ? '#6b3d2a' : '#c9b391'; c.fillRect(b.x, b.y, b.w, b.h); }
 }
 const mctx = minimap.getContext('2d')!;
 mctx.imageSmoothingEnabled = false;
@@ -206,7 +256,7 @@ minimap.addEventListener('click', (e) => {
   scene?.centerOn(x, y);
 });
 
-window.setInterval(() => { renderStatus(); renderPanel(); }, 500);
+window.setInterval(() => { renderStatus(); renderPanel(); if (cardPlace && cardPlace !== 'campus') renderCard(); }, 500);
 const loop = (): void => { renderMinimap(); requestAnimationFrame(loop); };
 requestAnimationFrame(loop);
 

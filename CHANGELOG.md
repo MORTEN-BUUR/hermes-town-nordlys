@@ -2,6 +2,13 @@
 
 All notable changes to Hermes Town are documented here.
 
+## Unreleased: Nordlys edition
+
+- New default `nordlys` theme: a modern Nordic campus with code-painted buildings (AI-paviljongen, Arkivet, Verkstedet, Datasenteret, Portalen, Observatoriet, Loungen, cabins), campus workstations, a winter regrade of the authored atlases, a cold blue-hour night, aurora and snow.
+- Residents wear Nordlys team suits with a role-coloured light seam.
+- New HUD: Nordlys mark, glass panels, campus names on the place buttons, place cards with the Nordlys pictures and a live count, team portraits as inspector avatars, and Lise in the connection help.
+- `?theme=classic` keeps the original town. `verify:world` now targets place buttons by `data-goto` instead of their label.
+
 ## 0.2.0 - 2026-09-17
 
 ### Live bridge
