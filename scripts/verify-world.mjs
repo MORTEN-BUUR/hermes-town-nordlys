@@ -72,21 +72,21 @@ try {
   // The director owns the camera by default; the camera checks below are about manual control.
   await page.getByRole('button', { name: 'Director: on', exact: true }).click();
   await page.waitForFunction(() => !window.__town.game.scene.getScene('town').isDirector());
-  await page.getByRole('button', { name: 'Town view', exact: true }).click();
+  await page.locator('#overview').click();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const initialZoom = await zoom();
-  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.locator('[data-goto=library]').click();
   await page.waitForFunction(() => Math.abs(window.__town.game.scene.getScene('town').cameras.main.zoom - 2.5) < 0.01);
-  await page.getByRole('button', { name: 'Town view', exact: true }).click();
+  await page.locator('#overview').click();
   assert.ok(Math.abs(await zoom() - initialZoom) < 0.01);
   await page.getByRole('button', { name: 'Follow: off', exact: true }).click();
   await page.waitForFunction(() => window.__town.game.scene.getScene('town').isFollowing());
-  await page.getByRole('button', { name: 'Town view', exact: true }).click();
+  await page.locator('#overview').click();
   assert.equal(await page.evaluate(() => window.__town.game.scene.getScene('town').isFollowing()), false);
   assert.equal(await page.locator('#follow').textContent(), 'Follow: off');
   await page.mouse.move(800, 450); await page.mouse.wheel(0, -300);
   await page.waitForFunction(z => window.__town.game.scene.getScene('town').cameras.main.zoom > z + 0.1, initialZoom);
-  await page.getByRole('button', { name: 'Town view', exact: true }).click();
+  await page.locator('#overview').click();
 
   await mkdir('output/playwright', { recursive: true });
   await page.screenshot({ path: 'output/playwright/world-overview.png' });
@@ -95,7 +95,7 @@ try {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.screenshot({ path: `output/playwright/world-${name}.png` });
   }
-  await page.getByRole('button', { name: 'Town view', exact: true }).click();
+  await page.locator('#overview').click();
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.waitForFunction(() => Math.abs(window.__town.game.scene.getScene('town').cameras.main.zoom - Math.min(1366 / (90 * 16), 768 / (50 * 16))) < 0.01);
   await page.screenshot({ path: 'output/playwright/world-1366.png' });

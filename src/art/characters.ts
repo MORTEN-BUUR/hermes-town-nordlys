@@ -94,10 +94,19 @@ export interface Look {
   garment?: 'jacket' | 'tunic' | 'coat';
   beard: boolean;
   belt: boolean;
+  /** Nordlys suit: a glowing seam colour. Present only in the Nordlys theme. */
+  trim?: string;
 }
 
+/** Nordlys team suits: near-black with a role-coloured light seam, as in the staff pictures. */
+const SUIT = ['#1a2130', '#20283a', '#161c28', '#242c3f'];
+const TRIM: Record<RoleClass, string> = {
+  coordinator: '#ffc46b', research: '#5fd4ff', fabrication: '#49f2d6', review: '#b48cff',
+  tooling: '#7fb2ff', general: '#49f2d6', scheduled: '#8a9bff',
+};
+
 /** A stable look from a stable id, nudged by role so jobs read at a glance. */
-export function lookFor(id: string, role: RoleClass): Look {
+export function lookFor(id: string, role: RoleClass, theme: 'classic' | 'nordlys' = 'classic'): Look {
   const r = mulberry(hashString(id));
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(r() * arr.length)]!;
   const cloth = pick(CLOTH);
@@ -125,6 +134,16 @@ export function lookFor(id: string, role: RoleClass): Look {
   look.garment = look.apron || role === 'scheduled' || role === 'coordinator' ? 'coat'
     : role === 'research' || role === 'general' ? 'tunic' : 'jacket';
   look.cloth2 = shade(look.cloth, 0.72);
+  if (theme === 'nordlys') {
+    look.cloth = pick(SUIT);
+    look.cloth2 = shade(look.cloth, 0.72);
+    look.pants = '#121722';
+    look.trim = TRIM[role];
+    look.apron = false;
+    // Scheduled keepers keep their hood; everyone else goes bareheaded.
+    if (look.hat !== 'hood' && look.hat !== 'goggles') look.hat = 'none';
+    if (role === 'research' && look.hat === 'hood') look.hat = 'none';
+  }
   return look;
 }
 
@@ -133,8 +152,8 @@ const HAT = '#8a6a3f';
 const HAT_DARK = '#6b4f2e';
 const STRAP = '#5a3d24';
 const BUCKLE = '#d9b34a';
-const BOOT = '#7a4f2e';
-const BOOT_DARK = '#5a3820';
+const BOOT_BROWN = '#7a4f2e';
+const BOOT_BROWN_DARK = '#5a3820';
 const APRON = '#ad9270';
 const APRON_DARK = '#8a7454';
 
@@ -208,6 +227,7 @@ function drawFrame(look: Look, facing: Facing, mode: Mode, phase: number): Paint
   const skinDark = shade(look.skin, 0.82);
   const pantsDark = shade(look.pants, 0.78);
   const hand = (point: Point, far = false) => rect(point.x, point.y, 2, 2, far ? skinDark : look.skin);
+  const BOOT = look.trim ? '#1b2130' : BOOT_BROWN, BOOT_DARK = look.trim ? '#0e121a' : BOOT_BROWN_DARK;
 
   // Legs keep the original foot spacing and grounded baseline. Side legs
   // separate fore/aft; front/back legs instead project that depth vertically.
@@ -336,7 +356,17 @@ function drawFrame(look: Look, facing: Facing, mode: Mode, phase: number): Paint
     rect(side ? 6 : 7, torsoTop + 10, side ? 5 : 6, 1, APRON_DARK);
   }
   const follow = walking ? [0,1,1,0,0,-1,-1,0][phase]! : 0;
-  if (!side) {
+  if (look.trim) {
+    // Light seams instead of a satchel: a zip line, a chest chevron, a hem line.
+    if (!back) {
+      rect(side ? 9 : 10, torsoTop + 1, 1, hem - 13, look.trim);
+      if (!side) { px(7, torsoTop + 2, look.trim); px(8, torsoTop + 3, look.trim); px(13, torsoTop + 2, look.trim); px(12, torsoTop + 3, look.trim); }
+      else { px(7, torsoTop + 2, look.trim); px(8, torsoTop + 3, look.trim); }
+    } else {
+      rect(tx + 2, torsoTop + 2, tw - 4, 1, look.trim);
+    }
+    rect(tx, hem - 1 + oy - (garment === 'jacket' ? 2 : 0), tw, 1, shade(look.trim, 0.6));
+  } else if (!side) {
     for (let i = 0; i < 7; i++) px(back ? 6 + i : 13 - i, torsoTop + i, STRAP);
     rect(back ? 13 : 4, torsoTop + 6 + follow, 3, 3, STRAP);
     px(back ? 14 : 5, torsoTop + 6 + follow, HAT);
@@ -346,8 +376,8 @@ function drawFrame(look: Look, facing: Facing, mode: Mode, phase: number): Paint
     px(13, torsoTop + 6 + follow, HAT);
   }
   if (look.belt) {
-    rect(tx, torsoTop + 6, tw, 1, STRAP);
-    if (!back) rect(side ? 8 : 9, torsoTop + 6, side ? 1 : 2, 1, BUCKLE);
+    rect(tx, torsoTop + 6, tw, 1, look.trim ? '#0e121a' : STRAP);
+    if (!back) rect(side ? 8 : 9, torsoTop + 6, side ? 1 : 2, 1, look.trim ?? BUCKLE);
   }
   if (!side) arm({x:15,y:shoulder}, handR, false);
   arm({x:side ? 5 : 3,y:shoulder}, handL, false);

@@ -5,18 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hermes Town</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script type="module" crossorigin src="/assets/index-BDVKR3ys.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-N6iO-ndU.css">
+    <script type="module" crossorigin src="/assets/index-DOIc6snC.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-13NCi5H2.css">
   </head>
   <body>
     <div id="game"></div>
     <div id="hud">
       <div id="masthead">
+        <div class="brand" aria-label="Nordlys">
+          <span>N</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M5.5 16.5 10 9.5l2.2 3.1 1.6-2.1 4.7 6z" fill="currentColor"/></svg><span>RDLYS</span>
+        </div>
         <div class="kicker">hermes runtime interface</div>
         <div class="title">Hermes Town</div>
         <div id="status" class="status" role="status">starting</div>
         <details id="connection-help" hidden>
           <summary>Connect Hermes</summary>
+          <figure class="guide"><img id="guide-portrait" alt="" /><figcaption>Lise · Nordlys guide</figcaption></figure>
           <p id="connection-note"></p>
           <ol>
             <li>Install and enable the Hermes Town plugin.</li>
@@ -40,6 +44,7 @@
         <button id="director" class="on">Director: on</button>
       </div>
       <div id="panel" hidden></div>
+      <aside id="place-card" hidden></aside>
       <canvas id="minimap" width="192" height="120"></canvas>
       <div id="foot">drag to pan · scroll to zoom · click a resident</div>
     </div>
