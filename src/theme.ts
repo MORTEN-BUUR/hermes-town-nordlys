@@ -52,11 +52,11 @@ export interface StaffPortrait {
 /**
  * The Nordlys team, used as avatars in the inspector. A portrait is a face
  * for a session, picked by a stable hash; it never claims that person did
- * the work. The numbers match the portrait sheet the owner reviews.
+ * the work. The numbers match the portrait sheet the owner confirmed.
  */
 const TEAM: [string, boolean][] = [
   ['Sherlock Holmes', true], ['Odin', true], ['Lise', true],
-  ['Morten Büür', false], ['Tord', false], ['Aleksander Olsen', false], ['Gary', false], ['Cody jr', false],
+  ['Morten Büür', true], ['Tord', true], ['Aleksander Olsen', true], ['Gary', true], ['Cody jr', true],
   ['Claude', true],
 ];
 export const STAFF: readonly StaffPortrait[] = TEAM.map(([name, confirmed], i) => ({

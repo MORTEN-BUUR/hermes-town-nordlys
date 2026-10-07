@@ -18,4 +18,4 @@ Residents are drawn in code at the same pixel density so identity colors and lif
 
 ## Nordlys pictures
 
-`nordlys/` holds pictures from the Nordlys datacenter / Norway AI project: place pictures (`places/`), the campus overview (`campus.jpg`), team portraits used as session avatars (`staff/`, numbered as on the owner's portrait sheet), and Ella the campus dog (`ella.jpg`). They are resized copies of the project owner's originals, used for the Nordlys theme only. Unlike the sprite atlases above, they are not offered under the MIT License; ask the owner before reusing them elsewhere.
+`nordlys/` holds pictures from the Nordlys datacenter / Norway AI project: place pictures (`places/`), the campus overview (`campus.jpg`), team portraits used as session avatars (`staff/`, numbered as on the owner's portrait sheet, all confirmed by the owner), and Ella the campus dog (`ella.jpg`). They are resized copies of the project owner's originals, used for the Nordlys theme only. Unlike the sprite atlases above, they are not offered under the MIT License; ask the owner before reusing them elsewhere.
