@@ -1,15 +1,14 @@
-import Phaser from 'phaser';
 import { TILE, T } from './art/tiles';
 import { createDemoSource } from './live/demoSource';
 import { createLiveSource } from './live/liveSource';
 import type { Source } from './live/events';
-import { TownScene } from './scenes/TownScene';
 import { TownSim } from './sim/town';
 import { PLACE_LABEL, type Place } from './sim/toolMap';
 import { MAP_H, MAP_W, buildTownMap } from './world/map';
 import { CAMPUS_IMAGE, GUIDE_IMAGE, NORDLYS_PLACES, STAFF, resolveTheme } from './theme';
 import { startSky } from './hud/sky';
 import { hashString } from './art/painter';
+import type { TownView } from './view';
 
 
 const params = new URLSearchParams(location.search);
@@ -21,6 +20,12 @@ const hourParam = params.get('hour');
 const hour = hourParam !== null && Number.isFinite(Number(hourParam)) ? Number(hourParam) : null;
 const theme = resolveTheme(location.search, import.meta.env.VITE_DEFAULT_THEME);
 document.body.classList.add(`theme-${theme}`);
+/**
+ * `?view=3d` renders the same town as a diorama. The simulation, the map and
+ * the painted art are shared; only the projection differs, so the work
+ * vocabulary is identical in both views.
+ */
+const view3d = params.get('view') === '3d';
 
 const map = buildTownMap();
 const sim = new TownSim(map);
@@ -33,36 +38,48 @@ const followBtn = $<HTMLButtonElement>('#follow');
 const directorBtn = $<HTMLButtonElement>('#director');
 const minimap = $<HTMLCanvasElement>('#minimap');
 
-let scene: TownScene | null = null;
+let scene: TownView | null = null;
 let selectedId: string | null = null;
 
-const game = new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: 'game',
-  width: Math.max(640, window.innerWidth),
-  height: Math.max(360, window.innerHeight),
-  pixelArt: true,
-  fps: { forceSetTimeOut: true, target: 60 },
-  roundPixels: true,
-  backgroundColor: theme === 'nordlys' ? '#070b14' : '#1a1620',
-  scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER },
-  scene: [],
-});
-const fit = (): void => {
-  const w = Math.max(320, window.innerWidth), h = Math.max(240, window.innerHeight);
-  if (game.scale.width !== w || game.scale.height !== h) game.scale.resize(w, h);
+const onSelect = (id: string | null): void => { selectedId = id; renderPanel(); };
+const expose = (extra: Record<string, unknown>): void => {
+  (window as unknown as { __town: unknown }).__town = { sim, map, ...extra };
 };
-window.addEventListener('resize', fit);
-window.setInterval(fit, 1000);
-game.scene.add('town', TownScene, true, {
-  map,
-  sim,
-  hour,
-  theme,
-  onSelect: (id: string | null) => { selectedId = id; renderPanel(); },
-});
-game.events.once("ready", () => { scene = game.scene.getScene("town") as TownScene; });
-(window as unknown as { __town: unknown }).__town = { game, sim, map };
+
+/** Each renderer loads on demand, so one view never ships the other's engine. */
+async function boot3d(): Promise<void> {
+  const { createTownView3D } = await import('./three/TownView3D');
+  scene = await createTownView3D({ map, sim, hour, theme, parent: $('#game'), onSelect });
+  expose({ view: scene });
+  renderStatus();
+}
+
+async function boot2d(): Promise<void> {
+  const [{ default: Phaser }, { TownScene }] = await Promise.all([import('phaser'), import('./scenes/TownScene')]);
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: 'game',
+    width: Math.max(640, window.innerWidth),
+    height: Math.max(360, window.innerHeight),
+    pixelArt: true,
+    fps: { forceSetTimeOut: true, target: 60 },
+    roundPixels: true,
+    backgroundColor: theme === 'nordlys' ? '#070b14' : '#1a1620',
+    scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER },
+    scene: [],
+  });
+  const fit = (): void => {
+    const w = Math.max(320, window.innerWidth), h = Math.max(240, window.innerHeight);
+    if (game.scale.width !== w || game.scale.height !== h) game.scale.resize(w, h);
+  };
+  window.addEventListener('resize', fit);
+  window.setInterval(fit, 1000);
+  game.scene.add('town', TownScene, true, { map, sim, hour, theme, onSelect });
+  game.events.once('ready', () => { scene = game.scene.getScene('town') as unknown as TownView; renderStatus(); });
+  expose({ game });
+}
+
+void (view3d ? boot3d() : boot2d());
 source.start();
 
 // ------------------------------------------------------------------ HUD
@@ -73,6 +90,19 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-goto]')) {
   const place = btn.dataset.goto as Place;
   if (theme === 'nordlys') btn.innerHTML = `<span class="nm">${escapeHtml(NORDLYS_PLACES[place].name)}</span><span class="en">${escapeHtml(PLACE_LABEL[place])}</span>`;
   btn.addEventListener('click', () => { scene?.goTo(place); showCard(place); });
+}
+const viewToggle = $<HTMLAnchorElement>('#view-toggle');
+{
+  const next = new URLSearchParams(location.search);
+  if (view3d) next.delete('view'); else next.set('view', '3d');
+  const query = next.toString();
+  viewToggle.href = `${location.pathname}${query ? `?${query}` : ''}`;
+  viewToggle.textContent = view3d ? 'View: 3D' : 'View: 2D';
+  viewToggle.title = view3d ? 'Switch to the flat town' : 'Switch to the campus diorama';
+  viewToggle.classList.toggle('on', view3d);
+  $('#foot').textContent = view3d
+    ? 'drag to orbit · shift-drag to pan · scroll to zoom · click a resident'
+    : 'drag to pan · scroll to zoom · click a resident';
 }
 if (theme === 'nordlys') {
   $('#overview').innerHTML = '<span class="nm">Campus</span><span class="en">Town view</span>';

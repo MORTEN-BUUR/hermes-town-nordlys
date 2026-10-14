@@ -14,6 +14,7 @@ import type { Place } from '../sim/toolMap';
 import { MAP_H, MAP_W, type Building, type PropKind, type TownMap } from '../world/map';
 import { LAMP_TINT, NIGHT_COLD, dustSnow, paintNordlysBuilding, paintNordlysEquipment, paintNordlysProp, winterGrade, type NordlysPropKind } from '../art/nordlys';
 import { NORDLYS_PLACES, type ThemeId } from '../theme';
+import type { TownView } from '../view';
 
 const ZOOMS = [1, 1.5, 2, 3, 4, 5];
 
@@ -47,7 +48,7 @@ export interface SceneOptions {
   onSelect: (id: string | null) => void;
 }
 
-export class TownScene extends Phaser.Scene {
+export class TownScene extends Phaser.Scene implements TownView {
   private opts!: SceneOptions;
   private views = new Map<string, ResidentView>();
   private buildingViews: BuildingView[] = [];

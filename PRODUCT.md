@@ -35,8 +35,12 @@ Hermes lifecycle hooks or scripted demo
                  ↓
       resident simulation and paths
                  ↓
-          Phaser town renderer
+   Phaser town renderer, or the 3D diorama
 ```
+
+The renderer is a view onto one simulation. A place, a pose and a lifecycle
+state mean the same thing in both, so switching views never changes what the
+viewer is being told.
 
 ## Non-goals
 

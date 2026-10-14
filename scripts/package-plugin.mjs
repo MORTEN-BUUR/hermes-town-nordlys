@@ -78,7 +78,21 @@ function expectedBundle(root) {
   files.set('LICENSE', fs.readFileSync(path.join(root, 'LICENSE')));
   const phaserLicense = fs.readFileSync(path.join(root, 'node_modules/phaser/LICENSE.md'), 'utf8').replace(/\r\n/g, '\n');
   const phaser = JSON.parse(fs.readFileSync(path.join(root, 'node_modules/phaser/package.json'), 'utf8'));
-  files.set('THIRD-PARTY-NOTICES.txt', Buffer.from(`Hermes Town code and original artwork: MIT; see LICENSE.\n\nPhaser ${phaser.version} (bundled in the prebuilt frontend)\nhttps://phaser.io/\n\n${phaserLicense}`));
+  const threeLicense = fs.readFileSync(path.join(root, 'node_modules/three/LICENSE'), 'utf8').replace(/\r\n/g, '\n');
+  const three = JSON.parse(fs.readFileSync(path.join(root, 'node_modules/three/package.json'), 'utf8'));
+  files.set('THIRD-PARTY-NOTICES.txt', Buffer.from([
+    'Hermes Town code and original artwork: MIT; see LICENSE.',
+    '',
+    `Phaser ${phaser.version} (bundled in the prebuilt frontend)`,
+    'https://phaser.io/',
+    '',
+    phaserLicense,
+    '',
+    `three.js ${three.version} (bundled in the prebuilt frontend, loaded only by the 3D view)`,
+    'https://threejs.org/',
+    '',
+    threeLicense,
+  ].join('\n')));
   const manifest = {
     schemaVersion: 1,
     version: JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version,

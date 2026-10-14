@@ -97,7 +97,7 @@ try {
   test('source, server, config, and freshly-built UI drift rejected', () => {
     const fixture = path.join(tmp, 'build-fixture'); const manifest = verifyRuntime(runtime);
     for (const name of Object.keys(manifest.sources)) copy(path.join(ROOT, name), path.join(fixture, name));
-    for (const name of ['dist', 'integrations/hermes-town-plugin/runtime', 'node_modules/phaser/LICENSE.md', 'node_modules/phaser/package.json']) copy(path.join(ROOT, name), path.join(fixture, name));
+    for (const name of ['dist', 'integrations/hermes-town-plugin/runtime', 'node_modules/phaser/LICENSE.md', 'node_modules/phaser/package.json', 'node_modules/three/LICENSE', 'node_modules/three/package.json']) copy(path.join(ROOT, name), path.join(fixture, name));
     packagePlugin({ root: fixture, check: true });
     for (const name of ['src/main.ts', 'server/townServer.mjs', 'vite.config.ts', 'dist/index.html']) {
       const file = path.join(fixture, name); const bytes = fs.readFileSync(file); fs.appendFileSync(file, '\n// source drift\n');

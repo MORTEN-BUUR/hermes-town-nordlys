@@ -21,12 +21,15 @@
     "test:onboarding": "npm run check:package && node tests/verify-onboarding-server.mjs && node tests/verify-package.mjs && python3 tests/verify-town-cli.py",
     "verify:onboarding": "node scripts/verify-onboarding.mjs",
     "verify:characters": "node scripts/verify-characters.mjs && node scripts/verify-motion.mjs",
-    "verify:world": "node scripts/verify-world.mjs"
+    "verify:world": "node scripts/verify-world.mjs && node scripts/verify-view3d.mjs",
+    "verify:view3d": "node scripts/verify-view3d.mjs"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
+    "@types/three": "^0.186.0",
     "playwright": "^1.55.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.3"
