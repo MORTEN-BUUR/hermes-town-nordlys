@@ -25,6 +25,7 @@ This fork dresses the town as the Nordlys datacenter campus from Norway AI: mode
 - The inspector shows a Nordlys team member as the session's avatar (Sherlock Holmes, Odin, Lise, Morten Büür, Tord, Aleksander Olsen, Gary, Cody jr, and Claude as a pixel resident). The avatar is picked by a stable hash and never claims that a person did the work.
 - Aurora and snow (`src/hud/sky.ts`) are ambience only and never react to Hermes events.
 - `?theme=classic` (or `VITE_DEFAULT_THEME=classic` at build time) restores the original medieval town.
+- `?view=3d` opens the same campus as a diorama: a free camera, real depth and snow-capped roofs, built from the same map and the same painted art. Drag to orbit, shift-drag to pan, scroll to zoom, click a resident. The simulation, the places, and every lifecycle meaning are identical; only the projection changes. The flat town stays the default, and each view loads its own renderer, so neither ships the other's engine.
 
 
 > v0.3.0 packages the bridge, local server, and prebuilt town together. Runtime use needs Hermes and Node.js, not a repository checkout, npm, or a frontend build. Catalog availability follows a separately reviewed pin update.

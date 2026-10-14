@@ -22,6 +22,10 @@ html, body { margin: 0; height: 100%; background: #14111a; overflow: hidden; fon
 #controls button { font: inherit; font-size: 11px; background: #2a2230; color: #e9dfc8; border: 1px solid #5a4838; padding: 5px 9px; border-radius: 4px; cursor: pointer; }
 #controls button:hover { background: #3a2f40; }
 #controls button.on { background: #7a4a2a; border-color: #c98a4a; }
+/* The view switch is a link so a view can be opened or shared directly. */
+#controls .toggle { font: inherit; font-size: 11px; background: #2a2230; color: #e9dfc8; border: 1px solid #5a4838; padding: 5px 9px; border-radius: 4px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
+#controls .toggle:hover { background: #3a2f40; }
+#controls .toggle.on { background: #7a4a2a; border-color: #c98a4a; }
 #panel { position: absolute; right: 16px; top: 14px; width: 250px; background: rgba(20,17,26,.9); border: 1px solid #4a3b33; padding: 12px 14px; border-radius: 6px; font-size: 12px; }
 #panel h3 { margin: 0 0 2px; font-size: 15px; color: #f3e6c9; }
 #panel .sub { color: #a8917a; margin-bottom: 8px; }
@@ -88,6 +92,9 @@ body.theme-nordlys {
 .theme-nordlys #controls button .en { font-size: 9px; color: var(--nl-muted); text-transform: uppercase; letter-spacing: .08em; }
 .theme-nordlys #controls button:hover { background: rgba(127, 233, 255, .08); border-color: var(--nl-line); }
 .theme-nordlys #controls button.on { background: rgba(73, 242, 214, .14); border-color: rgba(73, 242, 214, .5); color: #dffcf6; }
+.theme-nordlys #controls .toggle { font-family: inherit; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid transparent; color: var(--nl-text); border-radius: 10px; padding: 6px 11px; }
+.theme-nordlys #controls .toggle:hover { background: rgba(127, 233, 255, .08); border-color: var(--nl-line); }
+.theme-nordlys #controls .toggle.on { background: rgba(169, 139, 255, .16); border-color: rgba(169, 139, 255, .5); color: #ece4ff; }
 .theme-nordlys #panel { width: 270px; padding: 14px 16px; font-size: 12px; }
 .theme-nordlys #panel .avatar { display: block; float: right; margin: 0 0 6px 10px; text-align: center; }
 .theme-nordlys #panel .avatar img { width: 56px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--nl-line); display: block; }
@@ -118,6 +125,7 @@ body.theme-nordlys {
 @media (max-width: 640px) {
   .theme-nordlys .brand { font-size: 20px; }
   .theme-nordlys #controls button { padding: 5px 6px; }
+  #controls .toggle, .theme-nordlys #controls .toggle { padding: 5px 6px; }
   .theme-nordlys #controls button .en { display: none; }
   .theme-nordlys #place-card { left: 8px; right: 8px; width: auto; bottom: 120px; }
 }

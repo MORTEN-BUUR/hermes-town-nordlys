@@ -15,10 +15,10 @@ Every visible resident action maps to a real lifecycle event. Ambient smoke, spa
 
 ## Current architecture
 
-- Phaser 3, Vite, and strict TypeScript.
+- Phaser 3, Vite, and strict TypeScript. `?view=3d` renders the same town with three.js; both renderers satisfy `src/view.ts` and load on demand.
 - 16 px navigation tiles and nearest-neighbor rendering.
 - One authored town embedded in a larger countryside.
-- Simulation code under `src/sim/` contains no Phaser imports.
+- Simulation code under `src/sim/` contains no Phaser imports. Phaser appears only in `src/main.ts` and `src/scenes/`; `src/art/` paints plain canvases that either renderer can use.
 - Tool name to place and work style is centralized in `src/sim/toolMap.ts`.
 - The browser reads only the same-host Town snapshot and SSE endpoints.
 - The native Hermes plugin uses documented hooks and publishes an allowlisted payload.
@@ -36,6 +36,6 @@ Every visible resident action maps to a real lifecycle event. Ambient smoke, spa
 - Keep `src/main.ts` focused on boot and HUD wiring.
 - Keep server and plugin payloads allowlist-only.
 - Add a regression test before changing a privacy or lifecycle contract.
-- Run `npm run test:contracts`, `npm run build`, and `npm run verify:world` before release.
+- Run `npm run test:contracts`, `npm run build`, and `npm run verify:world` before release. `verify:world` checks the flat town and the diorama.
 - Validate the plugin with `hermes plugins doctor integrations/hermes-town-plugin --ci`.
 - Exercise demo and disconnected-live states in a real browser.
